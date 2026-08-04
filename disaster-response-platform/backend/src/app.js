@@ -12,6 +12,18 @@ const sosRoutes = require('./routes/sos.routes');
 const algorithmRoutes = require('./routes/algorithms.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 const path = require('path');
+const promClient = require('prom-client');
+
+// Initialize Prometheus metrics
+const collectDefaultMetrics = promClient.collectDefaultMetrics;
+collectDefaultMetrics({ prefix: 'disaster_' });
+
+const httpRequestDurationMicroseconds = new promClient.Histogram({
+  name: 'http_request_duration_seconds',
+  help: 'Duration of HTTP requests in seconds',
+  labelNames: ['method', 'route', 'code'],
+  buckets: [0.1, 0.3, 0.5, 0.7, 1, 3, 5, 7, 10]
+});
 
 const app = express();
 
@@ -21,6 +33,17 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Metrics middleware
+app.use((req, res, next) => {
+    const end = httpRequestDurationMicroseconds.startTimer();
+    res.on('finish', () => {
+        end({ route: req.route ? req.route.path : req.path, code: res.statusCode, method: req.method });
+    });
+    next();
+});
+
 app.use(cookieParser());
 
 // Swagger setup
@@ -63,6 +86,12 @@ app.use('/api/sos', sosRoutes);
 app.use('/api/algorithms', algorithmRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Prometheus Metrics Endpoint
+app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', promClient.register.contentType);
+    res.end(await promClient.register.metrics());
+});
 
 // 404 Handler
 app.use((req, res, next) => {
