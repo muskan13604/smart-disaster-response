@@ -26,6 +26,13 @@ app.set('io', io);
 io.on('connection', (socket) => {
     console.log('User connected via socket:', socket.id);
 
+    // The operations map joins this room to receive SOS alerts intended for
+    // dispatchers. Authentication/role validation should be added here before
+    // exposing this in a public production deployment.
+    socket.on('join_admin_room', () => {
+        socket.join('admin_room');
+    });
+
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
     });

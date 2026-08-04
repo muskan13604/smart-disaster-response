@@ -4,7 +4,8 @@ const Disaster = require('../models/disaster.model');
 const SOS = require('../models/sos.model');
 const Resource = require('../models/resource.model');
 const redisClient = require('../config/redis');
-const { protect, authorize } = require('../middlewares/auth.middleware');
+const { protect } = require('../middlewares/auth.middleware');
+const { authorize } = require('../middlewares/role.middleware');
 
 const router = express.Router();
 

@@ -59,6 +59,12 @@ const MapDashboard = () => {
 
         const socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000');
 
+        socket.on('connect', () => {
+            if (['Admin', 'Rescue Team'].includes(user?.role)) {
+                socket.emit('join_admin_room');
+            }
+        });
+
         socket.on('new_disaster', (disaster) => {
             setDisasters(prev => [disaster, ...prev]);
         });
