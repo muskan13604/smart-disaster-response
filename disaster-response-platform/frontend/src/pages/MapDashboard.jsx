@@ -57,12 +57,12 @@ const MapDashboard = () => {
         };
         fetchData();
 
-        const socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000');
-
-        socket.on('connect', () => {
-            if (['Admin', 'Rescue Team'].includes(user?.role)) {
-                socket.emit('join_admin_room');
-            }
+        const apiBaseUrl = import.meta.env.VITE_API_URL || '/api';
+        const socketUrl = apiBaseUrl === '/api'
+            ? window.location.origin
+            : apiBaseUrl.replace(/\/api$/, '');
+        const socket = io(socketUrl, {
+            auth: { token: localStorage.getItem('accessToken') }
         });
 
         socket.on('new_disaster', (disaster) => {

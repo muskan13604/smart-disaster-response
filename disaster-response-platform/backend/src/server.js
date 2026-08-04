@@ -3,6 +3,7 @@ const http = require('http');
 const mongoose = require('mongoose');
 const app = require('./app');
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
 
 const PORT = process.env.PORT || 5000;
 
@@ -23,15 +24,24 @@ const io = new Server(server, {
 
 app.set('io', io);
 
+io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (!token) return next(new Error('Authentication required'));
+
+    try {
+        socket.user = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+        next();
+    } catch (error) {
+        next(new Error('Invalid authentication token'));
+    }
+});
+
 io.on('connection', (socket) => {
     console.log('User connected via socket:', socket.id);
 
-    // The operations map joins this room to receive SOS alerts intended for
-    // dispatchers. Authentication/role validation should be added here before
-    // exposing this in a public production deployment.
-    socket.on('join_admin_room', () => {
+    if (['Admin', 'Rescue Team'].includes(socket.user.role)) {
         socket.join('admin_room');
-    });
+    }
 
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
