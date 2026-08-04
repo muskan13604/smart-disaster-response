@@ -1,13 +1,33 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import axiosInstance from '../services/axiosInstance';
-import { Search, Calculator } from 'lucide-react';
+import { Search, Calculator, Bell, BarChart2 } from 'lucide-react';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from 'chart.js';
+import { Doughnut, Bar } from 'react-chartjs-2';
+
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
 
 const Dashboard = () => {
     const { user, logout } = useContext(AuthContext);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [allocationResult, setAllocationResult] = useState(null);
+    const [analytics, setAnalytics] = useState(null);
+    const [unreadCount, setUnreadCount] = useState(3); // Mock for bell
+
+    useEffect(() => {
+        const fetchAnalytics = async () => {
+            try {
+                const res = await axiosInstance.get('/analytics/dashboard');
+                if (res.data.success) {
+                    setAnalytics(res.data.data);
+                }
+            } catch (err) {
+                console.error('Analytics error:', err);
+            }
+        };
+        fetchAnalytics();
+    }, []);
 
     const handleSearch = async (e) => {
         const query = e.target.value;
@@ -18,9 +38,7 @@ const Dashboard = () => {
                 if (res.data.success) {
                     setSearchResults(res.data.data);
                 }
-            } catch (err) {
-                console.error(err);
-            }
+            } catch (err) {}
         } else {
             setSearchResults([]);
         }
@@ -28,7 +46,6 @@ const Dashboard = () => {
 
     const runDPAllocation = async () => {
         try {
-            // Mock data for testing DP API
             const payload = {
                 totalResources: 100,
                 disasters: [
@@ -41,9 +58,24 @@ const Dashboard = () => {
             if (res.data.success) {
                 setAllocationResult(res.data.data);
             }
-        } catch (err) {
-            console.error(err);
-        }
+        } catch (err) {}
+    };
+
+    const disasterData = {
+        labels: Object.keys(analytics?.disasters || {}),
+        datasets: [{
+            data: Object.values(analytics?.disasters || {}),
+            backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
+        }]
+    };
+
+    const sosData = {
+        labels: Object.keys(analytics?.sos || {}),
+        datasets: [{
+            label: 'SOS Count',
+            data: Object.values(analytics?.sos || {}),
+            backgroundColor: '#3b82f6',
+        }]
     };
 
     return (
@@ -55,7 +87,15 @@ const Dashboard = () => {
                         <h1 className="text-3xl font-bold text-slate-800">Command Center</h1>
                         <p className="text-slate-500 mt-1">Welcome back, {user?.name}</p>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-6">
+                        <div className="relative cursor-pointer hover:bg-slate-100 p-2 rounded-full transition-colors">
+                            <Bell className="text-slate-600 w-6 h-6 hover:text-blue-600 transition-colors" />
+                            {unreadCount > 0 && (
+                                <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white">
+                                    {unreadCount}
+                                </span>
+                            )}
+                        </div>
                         <span className="px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-medium border border-blue-200">
                             {user?.role}
                         </span>
@@ -65,6 +105,40 @@ const Dashboard = () => {
                     </div>
                 </div>
 
+                {/* Analytics Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col items-center justify-center h-64">
+                        <h3 className="font-bold text-slate-700 mb-4">Disaster Status</h3>
+                        {analytics && Object.keys(analytics.disasters || {}).length > 0 ? (
+                            <div className="w-40 h-40"><Doughnut data={disasterData} options={{ maintainAspectRatio: false }}/></div>
+                        ) : <p className="text-sm text-slate-400">No data available</p>}
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col items-center justify-center h-64">
+                        <h3 className="font-bold text-slate-700 mb-4">SOS Requests</h3>
+                        {analytics && Object.keys(analytics.sos || {}).length > 0 ? (
+                            <div className="w-full h-40"><Bar data={sosData} options={{ maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }}/></div>
+                        ) : <p className="text-sm text-slate-400">No data available</p>}
+                    </div>
+
+                    <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl shadow-sm p-6 text-white flex flex-col justify-between h-64">
+                        <div>
+                            <h3 className="text-blue-100 font-medium flex items-center"><BarChart2 className="w-4 h-4 mr-2" /> Live Overview</h3>
+                            <div className="mt-6 space-y-4">
+                                <div>
+                                    <p className="text-sm text-blue-200">Active Disasters</p>
+                                    <p className="text-3xl font-bold">{analytics?.activeDisastersCount || 0}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-blue-200">Recent SOS Pending</p>
+                                    <p className="text-3xl font-bold">{analytics?.recentSOS?.length || 0}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Algorithms Section */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Location Search (Trie) */}
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
