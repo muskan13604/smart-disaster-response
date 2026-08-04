@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const axiosInstance = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+    baseURL: import.meta.env.VITE_API_URL || '/api',
     withCredentials: true // send cookies
 });
 
@@ -24,7 +24,7 @@ axiosInstance.interceptors.response.use((response) => {
     if (error.response && error.response.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
         try {
-            const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/refresh`, {}, { withCredentials: true });
+            const res = await axios.post(`${import.meta.env.VITE_API_URL || '/api'}/auth/refresh`, {}, { withCredentials: true });
             if (res.data.success) {
                 localStorage.setItem('accessToken', res.data.data.accessToken);
                 axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${res.data.data.accessToken}`;

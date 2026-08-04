@@ -15,9 +15,6 @@ const path = require('path');
 const promClient = require('prom-client');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
-const xss = require('xss-clean');
-const hpp = require('hpp');
 
 // Initialize Prometheus metrics
 const collectDefaultMetrics = promClient.collectDefaultMetrics;
@@ -32,6 +29,26 @@ const httpRequestDurationMicroseconds = new promClient.Histogram({
 
 const app = express();
 
+// Express 5 exposes req.query as a read-only getter.  Sanitize only mutable
+// request data so MongoDB operator and dotted-path keys never reach a query.
+const sanitizeObject = (value) => {
+    if (!value || typeof value !== 'object') return;
+
+    for (const key of Object.keys(value)) {
+        if (key.startsWith('$') || key.includes('.')) {
+            delete value[key];
+        } else {
+            sanitizeObject(value[key]);
+        }
+    }
+};
+
+const sanitizeRequest = (req, res, next) => {
+    sanitizeObject(req.body);
+    sanitizeObject(req.params);
+    next();
+};
+
 // Middlewares
 app.use(cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -39,6 +56,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(sanitizeRequest);
 
 // Security Hardening (OWASP)
 app.use(helmet());
@@ -48,9 +66,6 @@ const limiter = rateLimit({
     message: 'Too many requests from this IP, please try again in 15 minutes.'
 });
 app.use('/api', limiter);
-app.use(mongoSanitize()); // Prevent NoSQL injection
-app.use(xss()); // Prevent XSS
-app.use(hpp()); // Prevent HTTP Parameter Pollution
 
 // Metrics middleware
 app.use((req, res, next) => {
