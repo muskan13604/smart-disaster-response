@@ -13,6 +13,11 @@ const algorithmRoutes = require('./routes/algorithms.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 const path = require('path');
 const promClient = require('prom-client');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
+const hpp = require('hpp');
 
 // Initialize Prometheus metrics
 const collectDefaultMetrics = promClient.collectDefaultMetrics;
@@ -34,6 +39,18 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Security Hardening (OWASP)
+app.use(helmet());
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 mins
+    max: 100, // limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again in 15 minutes.'
+});
+app.use('/api', limiter);
+app.use(mongoSanitize()); // Prevent NoSQL injection
+app.use(xss()); // Prevent XSS
+app.use(hpp()); // Prevent HTTP Parameter Pollution
 
 // Metrics middleware
 app.use((req, res, next) => {

@@ -1,38 +1,51 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Unauthorized from './pages/Unauthorized';
+import React, { Suspense, lazy } from 'react';
+import { Routes, Route } from 'react-router-dom';
+import ErrorBoundary from './components/ErrorBoundary';
+import { ThemeProvider } from './context/ThemeContext';
+
+// Lazy loading pages for Code Splitting
+const Home = lazy(() => import('./pages/Home'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const MapDashboard = lazy(() => import('./pages/MapDashboard'));
+const CitizenSOS = lazy(() => import('./pages/CitizenSOS'));
+const Unauthorized = lazy(() => import('./pages/Unauthorized'));
+
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
-import MapDashboard from './pages/MapDashboard';
-import CitizenSOS from './pages/CitizenSOS';
+
+// Loading fallback
+const PageLoader = () => (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>
+);
 
 function App() {
     return (
-        <AuthProvider>
-            <Router>
-                <Routes>
-                    <Route path="/" element={<Navigate to="/dashboard" />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="/unauthorized" element={<Unauthorized />} />
-                    
-                    {/* Protected Routes (Any logged in user) */}
-                    <Route element={<ProtectedRoute />}>
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/map" element={<MapDashboard />} />
-                        <Route path="/sos" element={<CitizenSOS />} />
+        <ErrorBoundary>
+            <ThemeProvider>
+                <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/unauthorized" element={<Unauthorized />} />
                         
-                        {/* Role specific example */}
-                        <Route element={<RoleRoute allowedRoles={['Admin', 'Rescue Team']} />}>
-                            {/* <Route path="/admin" element={<AdminPanel />} /> */}
+                        <Route element={<ProtectedRoute />}>
+                            <Route path="/dashboard" element={<Dashboard />} />
+                            <Route path="/map" element={<MapDashboard />} />
+                            <Route path="/sos" element={<CitizenSOS />} />
+                            
+                            <Route element={<RoleRoute allowedRoles={['Admin', 'Rescue Team']} />}>
+                                {/* Future Admin-only routes */}
+                            </Route>
                         </Route>
-                    </Route>
-                </Routes>
-            </Router>
-        </AuthProvider>
+                    </Routes>
+                </Suspense>
+            </ThemeProvider>
+        </ErrorBoundary>
     );
 }
 
