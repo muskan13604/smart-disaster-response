@@ -6,6 +6,8 @@ import Dashboard from './pages/Dashboard';
 import Unauthorized from './pages/Unauthorized';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleRoute from './components/RoleRoute';
+import MapDashboard from './pages/MapDashboard';
+import CitizenSOS from './pages/CitizenSOS';
 
 function App() {
     return (
@@ -20,6 +22,8 @@ function App() {
                     {/* Protected Routes (Any logged in user) */}
                     <Route element={<ProtectedRoute />}>
                         <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/map" element={<MapDashboard />} />
+                        <Route path="/sos" element={<CitizenSOS />} />
                         
                         {/* Role specific example */}
                         <Route element={<RoleRoute allowedRoles={['Admin', 'Rescue Team']} />}>

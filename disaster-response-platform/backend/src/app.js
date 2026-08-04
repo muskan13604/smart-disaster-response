@@ -7,6 +7,9 @@ const { sendResponse } = require('./utils/response.util');
 
 // Routes
 const authRoutes = require('./routes/auth.routes');
+const disasterRoutes = require('./routes/disaster.routes');
+const sosRoutes = require('./routes/sos.routes');
+const path = require('path');
 
 const app = express();
 
@@ -53,6 +56,9 @@ app.use('/api-docs', swaggerUI.serve, swaggerUI.setup(swaggerDocs));
 
 // Mount Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/disasters', disasterRoutes);
+app.use('/api/sos', sosRoutes);
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // 404 Handler
 app.use((req, res, next) => {
